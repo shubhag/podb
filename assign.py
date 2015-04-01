@@ -23,9 +23,6 @@ def split_array(array):
     half = len(array)/2
     return array[:half], array[half:]
 
-
-
-
 def insert(key,value, filename):
 	global tempCount
 	global maxitem
@@ -105,6 +102,8 @@ def insert(key,value, filename):
 					if root != filename :
 						printToOpenFile(str(numKeys1) + '\n', data[1] , ' '.join(keyvalue1) + '\n', ' '.join(ptrvalue1) + '\n', f)
 						printTofile(numKeys2,0,' '.join(keyvalue2), ' '.join(ptrvalue2), siblingfile)
+						filename1 = filename
+						filename2 = siblingfile
 						return parentKeyValue
 					else:
 						parentfilename = 'dat/podb' + str(tempCount)
@@ -116,6 +115,7 @@ def insert(key,value, filename):
 						return -1
 			else:
 				return -1
+
 if __name__ == '__main__':
 	f = open('bplustree.config', 'r')
 	data = f.readline()
