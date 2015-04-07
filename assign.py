@@ -1,8 +1,7 @@
 #!/usr/bin/python
 import bisect
-
-tempCount = 0 
-root = "dat/podb0"
+import time
+import numpy
 
 def printTofile(numKeys, isleaf, key, value, fname):
 	f = open(fname, 'w+')
@@ -134,7 +133,11 @@ def insert(key,value, filename):
 
 def queryKey(key, filename):
 	global tempCount
+	global pointtime
+	global poinstart
 	if tempCount == 0 :
+		pointend = time.time()
+		pointtime.append( pointend - pointstart )
 		print "No data inserted at all"
 		return
 	f = open(filename, 'r+')
@@ -145,8 +148,12 @@ def queryKey(key, filename):
 	if isleaf == '1':
 		if keyvalue.count(key):
 			index = bisect.bisect_left(keyvalue, key)
-			print '1', keyvalue[index] , idxvalue[index]
+			pointend = time.time()
+			pointtime.append( pointend - pointstart )
+			print keyvalue[index] , idxvalue[index]
 		else:
+			pointend = time.time()
+			pointtime.append( pointend - pointstart )
 			print "Not present"
 	else:
 		index = bisect.bisect_left(keyvalue, key)
@@ -154,6 +161,7 @@ def queryKey(key, filename):
 	f.closed
 
 def searchFile(key, rKey, filename):
+	global rangeresult
 	f = open(filename, 'r+')
 	data = f.readlines()
 	isleaf = data[1].rstrip()
@@ -164,12 +172,12 @@ def searchFile(key, rKey, filename):
 		index2 = bisect.bisect_right(keyvalue, rKey)
 		i = index1
 		while i < len(keyvalue) and i < index2 :
-			print keyvalue[i] +'\t'+idxvalue[i]
+			rangeresult.append(keyvalue[i] +'\t'+idxvalue[i])
 			i += 1
 		f.closed
 		if index1 == len(keyvalue):
-			print "No results found"
-		if index2 == len(keyvalue):
+			rangeresult.append("No results found")
+		if index2 < len(keyvalue):
 			return '-1'
 		else:
 			return data[4].rstrip() 
@@ -179,6 +187,7 @@ def searchFile(key, rKey, filename):
 		return searchFile(key, rKey, idxvalue[index])
 
 def queryTillRight(qright, filename):
+	global rangeresult
 	f = open(filename, 'r+')
 	data = f.readlines()
 	isleaf = data[1].rstrip()
@@ -188,10 +197,10 @@ def queryTillRight(qright, filename):
 		index = bisect.bisect_right(keyvalue, qright)
 		i = 0
 		while i < len(keyvalue) and i < index :
-			print keyvalue[i] +'\t'+idxvalue[i]
+			rangeresult.append(keyvalue[i] +'\t'+idxvalue[i])
 			i += 1
 		f.closed
-		if index == len(keyvalue):
+		if index < len(keyvalue):
 			return '-1'
 		else:
 			return data[4].rstrip()
@@ -201,8 +210,9 @@ def queryTillRight(qright, filename):
 
 def rangeQuery(qcenter, qrange ):
 	global tempCount
+	global rangeresult
 	if tempCount == 0 :
-		print "No data inserted at all"
+		rangeresult.append("No data inserted at all")
 		return
 	queryLeft = str( float(qcenter) - float(qrange) )
 	queryRight = str( float(qcenter) + float(qrange) )
@@ -210,42 +220,89 @@ def rangeQuery(qcenter, qrange ):
 	while filename != '-1' :
 		filename = queryTillRight(queryRight,filename)
 
+def insertLearnData():
+	global root
+	global tempCount
+	a = 0
+	with open("assgn2_bplus_data.txt", "r") as queryfile:
+		for line in queryfile:
+			a +=1
+			indices = line.rstrip().split('\t')
+			insert(indices[0], indices[1],root)
+	print a
+	f = open('rootfile.txt', 'w+')
+	data =  [str(root) +'\n' , str(tempCount) + '\n']
+	f.writelines(data)
+	f.closed
+
 if __name__ == '__main__':
+	inserttime = []
+	pointtime = []
+	rangetime = []
 	f = open('bplustree.config', 'r')
 	data = f.readline()
 	maxitem = int(data.rstrip())
 	f.close()
-	a = 0 
 	filename1 = -1
 	filename2 = -1
 
-	# with open("assgn2_bplus_data.txt", "r") as queryfile:
-	# 	for line in queryfile:
-	# 		a +=1
-	# 		# print a
-	# 		indices = line.rstrip().split('\t')
-	# 		# print indices[0], indices[1]
-	# 		insert(indices[0], indices[1],root)
-	# querycount = 0
-	# with open("assgn2_bplus_data.txt", "r") as queryfile:
-	# 	for line in queryfile:
-	# 		# a +=1
-	# 		# print a
-	# 		indices = line.rstrip().split('\t')
-	# 		# print indices[0], indices[1]
-	# 		queryKey(indices[0], root)
+	tempCount = 0 
+	root = "dat/podb0"
+
+	insertLearnData()
+
+	f = open('rootfile.txt', 'r+')
+	data = f.readlines()
+	root = data[0].rstrip()
+	tempCount = int(data[1].rstrip())
+	f.closed
+	print root, tempCount
 	a = 0
+
 	with open("querysample.txt", "r") as queryfile:
 		for line in queryfile:
 			a+=1 
-			print a
+			print "Query no. :" + str(a) + "----------------------"
 			indices = line.rstrip().split('\t')
 			if indices[0] == '0':
+				insertstart = time.time()
 				insert(indices[1], indices[2],root)
-				print "Inserted"
+				insertend = time.time()
+				inserttime.append( insertend - insertstart )
+				print "Data inserted"
 			elif indices[0] == '1':
+				pointstart = time.time()
 				queryKey(indices[1], root)
 			elif indices[0] == '2':
+				rangeresult = []
+				rangestart = time.time()
 				rangeQuery(indices[1], indices[2])
+				rangeend = time.time()
+				rangetime.append(rangeend-rangestart)
+				for rangeres in rangeresult:
+					print rangeres
 			else:
 				print "Inappropriate query type"
+
+	print "Insertion:========================="
+	print "Max time:"+ str(max(inserttime))
+	print "Min time:"+ str(min(inserttime))
+	print "Avg time:" + str(float(sum(inserttime)) / float(len(inserttime))) 
+	print "Standard deviation:"+ str(numpy.std(inserttime)) + "\n"
+
+	print "Point query:========================="
+	print "Max time:"+ str(max(pointtime))
+	print "Min time:"+ str(min(pointtime))
+	print "Avg time:" + str(float(sum(pointtime)) / float(len(pointtime))) 
+	print "Standard deviation:"+ str(numpy.std(pointtime)) + "\n"
+
+	print "Range query:========================="
+	print "Max time:"+ str(max(rangetime))
+	print "Min time:"+ str(min(rangetime))
+	print "Avg time:" + str(float(sum(rangetime)) / float(len(rangetime))) 
+	print "Standard deviation:"+ str(numpy.std(rangetime)) + "\n"
+
+	f = open('rootfile.txt', 'w+')
+	data =  [str(root) +'\n' , str(tempCount) + '\n']
+	f.writelines(data)
+	f.closed
